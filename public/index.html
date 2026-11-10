@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="theme-color" content="#F4F5F9" />
+    <title>%WEB_TITLE%</title>
+
+    <!--
+      「ホーム画面に追加」用の設定。
+      パスの /liflow は app.json の experiments.baseUrl（公開先のサブパス）と揃えること。
+    -->
+    <!-- Android（Chrome）などが参照する PWA マニフェスト -->
+    <link rel="manifest" href="/liflow/manifest.json" />
+    <!-- iPhone（Safari）用のアイコンと表示設定 -->
+    <link rel="apple-touch-icon" href="/liflow/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="LIFE MANAGER" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>このアプリを使うには JavaScript を有効にしてください。</noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
