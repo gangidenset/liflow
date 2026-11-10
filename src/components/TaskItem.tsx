@@ -38,7 +38,7 @@ export function TaskItem({ task, todayKey, onToggle, onPress }: Props) {
       <Pressable
         onPress={() => onToggle(task.id)}
         accessibilityRole="checkbox"
-        accessibilityState={{ checked: completed }}
+        aria-checked={completed}
         accessibilityLabel={`${task.title}を${completed ? '未完了に戻す' : '完了にする'}`}
         hitSlop={4}
         style={styles.checkArea}
