@@ -87,6 +87,10 @@ npm run typecheck
 ```
 
 ```bash
+npm run lint
+```
+
+```bash
 npm test
 ```
 
