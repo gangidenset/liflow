@@ -87,6 +87,12 @@ npm run typecheck
 ```
 
 ```bash
+npm test
+```
+
+`npm test` は、日付の判定、並び替えと絞り込み、タスクの状態更新、保存データの読み書きを対象にした自動テスト（Jest）を実行します。テストは `src/__tests__/` にあります。
+
+```bash
 npx expo-doctor
 ```
 
@@ -97,6 +103,7 @@ src/
   app/          画面（Expo Router）
     (tabs)/     下部タブ（ホーム・タスク一覧）
     task-editor.tsx  タスク追加・編集（モーダル）
+  __tests__/    自動テスト
   components/   共通コンポーネント
   context/      タスクの状態管理
   hooks/        共通フック

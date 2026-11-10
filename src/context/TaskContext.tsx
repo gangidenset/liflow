@@ -13,14 +13,14 @@ import {
 import { loadTasks, saveTasks } from '@/storage/taskStorage';
 import type { Task, TaskInput } from '@/types/task';
 
-type Action =
+export type TaskAction =
   | { type: 'loaded'; tasks: Task[] }
   | { type: 'added'; task: Task }
   | { type: 'updated'; id: string; input: TaskInput; now: string }
   | { type: 'toggled'; id: string; now: string }
   | { type: 'deleted'; id: string };
 
-function reducer(state: Task[], action: Action): Task[] {
+export function taskReducer(state: Task[], action: TaskAction): Task[] {
   switch (action.type) {
     case 'loaded':
       return action.tasks;
@@ -69,7 +69,7 @@ type TaskContextValue = {
 const TaskContext = createContext<TaskContextValue | null>(null);
 
 export function TaskProvider({ children }: { children: ReactNode }) {
-  const [tasks, dispatch] = useReducer(reducer, []);
+  const [tasks, dispatch] = useReducer(taskReducer, []);
   const [isLoaded, setIsLoaded] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
   /** 読み込みに失敗した場合、既存の保存データを空の一覧で上書きしないために保存を止める */
