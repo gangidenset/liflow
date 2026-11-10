@@ -100,6 +100,39 @@ npm test
 npx expo-doctor
 ```
 
+## Web 版（ホーム画面に追加して使う）
+
+Web 版は GitHub Pages で公開します。`main` に変更が入るたびに、GitHub Actions（`.github/workflows/deploy-web.yml`）が自動でビルドして公開します。
+
+公開 URL: https://gangidenset.github.io/liflow/
+
+### 初回の設定（1 回だけ）
+
+1. GitHub のリポジトリを公開（Public）にします（Settings → General → Danger Zone → Change repository visibility）。
+2. Settings → Pages の「Build and deployment」で、Source を「GitHub Actions」にします。
+
+### ホーム画面に追加する
+
+- **iPhone**: Safari で公開 URL を開き、共有ボタン →「ホーム画面に追加」を選びます。
+- **Android**: Chrome で公開 URL を開き、メニュー（⋮）→「ホーム画面に追加」または「アプリをインストール」を選びます。
+
+追加したアイコンから開くと、ブラウザの枠なしで起動します。
+
+### 注意点
+
+- データはブラウザ内に保存されます。Expo Go 版や他の端末・他のブラウザとは共有されません。
+- ブラウザの「サイトデータを削除」を行うと、タスクも消えます。
+- オフラインでは起動できません（通信が必要です）。
+- 期限の入力欄は、ブラウザ標準の日付入力になります。
+
+### 手元でビルドする
+
+```bash
+npm run build:web
+```
+
+`dist/` に出力されます。公開先のサブパス（`/liflow`）は `app.json` の `experiments.baseUrl` と `public/index.html` で指定しています。リポジトリ名を変える場合は両方を変更してください。
+
 ## CI
 
 プルリクエストの作成・更新時と `main` への Push 時に、GitHub Actions が lint・型チェック・自動テスト・`expo-doctor` を実行します。設定は `.github/workflows/ci.yml` にあります。
