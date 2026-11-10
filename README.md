@@ -100,6 +100,10 @@ npm test
 npx expo-doctor
 ```
 
+## CI
+
+プルリクエストの作成・更新時と `main` への Push 時に、GitHub Actions が lint・型チェック・自動テストを実行します。設定は `.github/workflows/ci.yml` にあります。
+
 ## ディレクトリ構成
 
 ```
