@@ -1,16 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { Pressable, StyleSheet } from 'react-native';
 
 import { cardShadow, colors, radius, spacing } from '@/theme';
 
-/** 画面右下に固定表示するタスク追加ボタン。 */
-export function AddButton() {
+type Props = {
+  /** 押したときの遷移先 */
+  href?: Href;
+  /** 読み上げ用のラベル */
+  label?: string;
+};
+
+/** 画面右下に固定表示する追加ボタン。既定ではタスクの追加画面を開く。 */
+export function AddButton({ href = '/task-editor', label = 'タスクを追加' }: Props) {
   return (
     <Pressable
-      onPress={() => router.push('/task-editor')}
+      onPress={() => router.push(href)}
       accessibilityRole="button"
-      accessibilityLabel="タスクを追加"
+      accessibilityLabel={label}
       style={({ pressed }) => [styles.button, pressed && styles.pressed]}
     >
       <Ionicons name="add" size={32} color={colors.onPrimary} />

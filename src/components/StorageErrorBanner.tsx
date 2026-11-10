@@ -1,15 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { useTasks } from '@/context/TaskContext';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
 /** データの読み込み・保存に失敗したときだけ表示する。 */
-export function StorageErrorBanner() {
-  const { storageError } = useTasks();
-  if (!storageError) return null;
+export function StorageErrorBanner({ message }: { message: string | null }) {
+  if (!message) return null;
   return (
     <View style={styles.banner} accessibilityRole="alert">
-      <Text style={styles.text}>{storageError}</Text>
+      <Text style={styles.text}>{message}</Text>
     </View>
   );
 }

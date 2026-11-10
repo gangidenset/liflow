@@ -41,6 +41,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="ledger"
+        options={{
+          title: '家計簿',
+          tabBarIcon: ({ size, focused }) => (
+            <Ionicons name={focused ? 'wallet' : 'wallet-outline'} size={size} color={focused ? colors.primary : colors.textMuted} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

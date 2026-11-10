@@ -21,7 +21,7 @@ const EMPTY_MESSAGES: Record<TaskFilter, { title: string; message?: string }> = 
 };
 
 export default function TasksScreen() {
-  const { tasks, isLoaded, toggleTask } = useTasks();
+  const { tasks, isLoaded, storageError, toggleTask } = useTasks();
   const todayKey = useTodayKey();
   const [filter, setFilter] = useState<TaskFilter>('all');
 
@@ -38,7 +38,7 @@ export default function TasksScreen() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="タスク一覧" />
-      <StorageErrorBanner />
+      <StorageErrorBanner message={storageError} />
       <View style={styles.filter}>
         <FilterTabs value={filter} counts={counts} onChange={setFilter} />
       </View>
