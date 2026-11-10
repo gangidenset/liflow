@@ -41,20 +41,44 @@ npm install
 npx expo start
 ```
 
-ターミナルに QR コードが表示されます。
+ターミナルに QR コードが表示されます。終了するときは `Ctrl + C` を押します。
 
 ## 実機確認方法（Expo Go）
 
-PC とスマートフォンを同じ Wi-Fi に接続してください。
+事前に、PC とスマートフォンを同じ Wi-Fi に接続してください。Expo Go は最新版に更新しておきます（このアプリは Expo SDK 58 を使用しています）。
 
-- **iPhone**: App Store から「Expo Go」をインストールし、標準のカメラアプリで QR コードを読み取ります。
-- **Android**: Google Play から「Expo Go」をインストールし、Expo Go 内の「Scan QR code」で読み取ります。
+### iPhone
 
-同じ Wi-Fi に接続できない場合は、トンネル接続で起動します。
+1. App Store で「Expo Go」をインストールします。
+2. PC で `npx expo start` を実行します。
+3. iPhone 標準のカメラアプリで、ターミナルの QR コードを読み取ります。
+4. 表示された通知をタップすると、Expo Go でアプリが開きます。
 
-```bash
-npx expo start --tunnel
-```
+### Android
+
+1. Google Play で「Expo Go」をインストールします。
+2. PC で `npx expo start` を実行します。
+3. Expo Go を開き、「Scan QR code」でターミナルの QR コードを読み取ります。
+
+### 実機で確認する項目
+
+- タスクの追加・編集・削除・完了切り替えができる
+- 期限の日付を選択・解除できる（iPhone はカレンダー、Android は日付ダイアログ）
+- Expo Go を完全に終了して開き直しても、タスクが残っている
+- 文字入力中にキーボードで入力欄や保存ボタンが隠れない
+- ノッチやホームバーに表示が重ならない
+
+## うまく動かないとき
+
+| 症状 | 対処 |
+|---|---|
+| QR コードを読んでも接続できない | PC とスマートフォンが同じ Wi-Fi か確認します。改善しない場合は `npx expo start --tunnel` で起動します。 |
+| 「Project is incompatible with this version of Expo Go」と表示される | Expo Go を最新版に更新します。 |
+| 変更が反映されない、原因不明のエラーが出る | `npx expo start --clear` でキャッシュを消して起動します。 |
+| 依存関係のエラーが出る | `node_modules` を削除して `npm install` をやり直し、`npx expo-doctor` で確認します。 |
+| PC のファイアウォールで接続が遮断される | Node.js の通信を許可するか、`--tunnel` で起動します。 |
+
+パッケージを追加するときは、SDK に合ったバージョンが入るよう `npm install` ではなく `npx expo install <パッケージ名>` を使います。
 
 ## 開発用コマンド
 
