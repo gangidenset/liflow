@@ -10,13 +10,23 @@ export type DueDateFieldProps = {
   value: string | null;
   todayKey: string;
   onChange: (value: string | null) => void;
+  /** 「解除」ボタンを出すか（既定 true）。必須の日付では false にする */
+  clearable?: boolean;
+  /** 読み上げ用の項目名（既定「期限」） */
+  label?: string;
 };
 
 /**
  * 期限の入力欄。
  * Android は OS 標準の日付ダイアログ、iOS は欄の下にカレンダーを開く。
  */
-export function DueDateField({ value, todayKey, onChange }: DueDateFieldProps) {
+export function DueDateField({
+  value,
+  todayKey,
+  onChange,
+  clearable = true,
+  label = '期限',
+}: DueDateFieldProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const pickerDate = fromDateKey(value ?? todayKey);
 
@@ -45,7 +55,9 @@ export function DueDateField({ value, todayKey, onChange }: DueDateFieldProps) {
         <Pressable
           onPress={openPicker}
           accessibilityRole="button"
-          accessibilityLabel={value ? `期限 ${formatDateKey(value, todayKey)}。変更する` : '期限を設定'}
+          accessibilityLabel={
+            value ? `${label} ${formatDateKey(value, todayKey)}。変更する` : `${label}を設定`
+          }
           style={({ pressed }) => [styles.field, pressed && styles.pressed]}
         >
           <Ionicons name="calendar-outline" size={20} color={colors.primary} />
@@ -53,11 +65,11 @@ export function DueDateField({ value, todayKey, onChange }: DueDateFieldProps) {
             {value ? formatDateKey(value, todayKey) : '期限なし'}
           </Text>
         </Pressable>
-        {value !== null ? (
+        {clearable && value !== null ? (
           <Pressable
             onPress={clear}
             accessibilityRole="button"
-            accessibilityLabel="期限を解除"
+            accessibilityLabel={`${label}を解除`}
             style={({ pressed }) => [styles.clear, pressed && styles.pressed]}
           >
             <Ionicons name="close" size={22} color={colors.textSecondary} />

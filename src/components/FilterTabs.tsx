@@ -25,7 +25,7 @@ export function FilterTabs({ value, counts, onChange }: Props) {
             key={key}
             onPress={() => onChange(key)}
             accessibilityRole="tab"
-            accessibilityState={{ selected }}
+            aria-selected={selected}
             accessibilityLabel={`${label} ${counts[key]}件`}
             style={[styles.tab, selected && styles.tabSelected]}
           >

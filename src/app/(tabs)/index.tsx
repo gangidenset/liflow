@@ -15,7 +15,7 @@ import { formatFullDate, fromDateKey } from '@/utils/date';
 import { isTodayTask, sortTasks } from '@/utils/taskSort';
 
 export default function HomeScreen() {
-  const { tasks, isLoaded, toggleTask } = useTasks();
+  const { tasks, isLoaded, storageError, toggleTask } = useTasks();
   const todayKey = useTodayKey();
 
   const todayTasks = useMemo(
@@ -31,7 +31,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <ScreenHeader title="今日" subtitle={formatFullDate(fromDateKey(todayKey))} />
-      <StorageErrorBanner />
+      <StorageErrorBanner message={storageError} />
       {isLoaded ? (
         <FlatList
           data={todayTasks}

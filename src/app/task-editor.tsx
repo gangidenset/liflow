@@ -155,7 +155,7 @@ function TaskForm({ isEdit, initial, onSubmit, onDelete }: TaskFormProps) {
                 key={key}
                 onPress={() => setPriority(key)}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                aria-checked={selected}
                 accessibilityLabel={`優先度 ${PRIORITY_LABELS[key]}`}
                 style={[
                   styles.priorityOption,

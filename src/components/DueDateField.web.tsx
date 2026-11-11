@@ -9,14 +9,25 @@ import type { DueDateFieldProps } from './DueDateField';
  * Web（開発時のブラウザ確認用）の期限入力欄。
  * ネイティブの日付ピッカーは Web で動作しないため、ブラウザ標準の日付入力を使う。
  */
-export function DueDateField({ value, onChange }: DueDateFieldProps) {
+export function DueDateField({
+  value,
+  onChange,
+  clearable = true,
+  label = '期限',
+}: DueDateFieldProps) {
   return (
     <View style={styles.row}>
       {createElement('input', {
         type: 'date',
         value: value ?? '',
-        'aria-label': '期限',
-        onChange: (event: { target: { value: string } }) => onChange(event.target.value || null),
+        'aria-label': label,
+        // 必須の日付では空にできないようにする
+        required: !clearable,
+        onChange: (event: { target: { value: string } }) => {
+          const next = event.target.value || null;
+          if (next === null && !clearable) return;
+          onChange(next);
+        },
         style: {
           flex: 1,
           minHeight: MIN_TOUCH,
@@ -30,7 +41,7 @@ export function DueDateField({ value, onChange }: DueDateFieldProps) {
           padding: `0 ${spacing.lg}px`,
         },
       })}
-      {value !== null ? (
+      {clearable && value !== null ? (
         <Pressable onPress={() => onChange(null)} accessibilityRole="button" style={styles.clear}>
           <Text style={styles.clearLabel}>解除</Text>
         </Pressable>
