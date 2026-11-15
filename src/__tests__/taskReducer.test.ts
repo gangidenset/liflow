@@ -46,15 +46,50 @@ describe('taskReducer', () => {
     expect(reopened[0]).toMatchObject({ completed: false, completedAt: null });
   });
 
-  it('deleted: 対象だけ取り除く', () => {
+  it('deleted: 記録は残し、削除日時と更新日時を付ける（同期で削除を伝えるため）', () => {
     const state = [makeTask({ id: 'a' }), makeTask({ id: 'b' })];
-    expect(taskReducer(state, { type: 'deleted', id: 'a' }).map((task) => task.id)).toEqual(['b']);
+    const next = taskReducer(state, { type: 'deleted', id: 'a', now: NOW });
+    expect(next[0]).toMatchObject({ id: 'a', deletedAt: NOW, updatedAt: NOW });
+    expect(next[1]).toBe(state[1]);
+  });
+
+  it('merged: 新しい方を残し、手元にない記録を加える', () => {
+    const state = [
+      makeTask({ id: 'a', title: '手元が新しい', updatedAt: '2026-11-10T00:00:00.000Z' }),
+      makeTask({ id: 'b', title: '手元が古い', updatedAt: '2026-11-01T00:00:00.000Z' }),
+    ];
+    const next = taskReducer(state, {
+      type: 'merged',
+      tasks: [
+        makeTask({ id: 'a', title: '受信が古い', updatedAt: '2026-11-05T00:00:00.000Z' }),
+        makeTask({ id: 'b', title: '受信が新しい', updatedAt: '2026-11-05T00:00:00.000Z' }),
+        makeTask({ id: 'c', title: '新規' }),
+      ],
+    });
+    expect(next.map((t) => [t.id, t.title])).toEqual([
+      ['c', '新規'],
+      ['a', '手元が新しい'],
+      ['b', '受信が新しい'],
+    ]);
+  });
+
+  it('merged: 他の端末での削除も取り込む', () => {
+    const state = [makeTask({ id: 'a' })];
+    const next = taskReducer(state, {
+      type: 'merged',
+      tasks: [makeTask({ id: 'a', deletedAt: NOW, updatedAt: NOW })],
+    });
+    expect(next[0].deletedAt).toBe(NOW);
+  });
+
+  it('reset: すべて消す', () => {
+    expect(taskReducer([makeTask()], { type: 'reset' })).toEqual([]);
   });
 
   it('存在しない id の操作では内容が変わらない', () => {
     const state = [makeTask({ id: 'a' })];
     expect(taskReducer(state, { type: 'toggled', id: 'x', now: NOW })).toEqual(state);
-    expect(taskReducer(state, { type: 'deleted', id: 'x' })).toEqual(state);
+    expect(taskReducer(state, { type: 'deleted', id: 'x', now: NOW })).toEqual(state);
   });
 
   it('元の state を書き換えない', () => {

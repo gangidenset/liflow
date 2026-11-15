@@ -7,8 +7,8 @@ const STORAGE_KEY = '@ai-life-manager/tasks/v1';
 const PRIORITIES: readonly Priority[] = ['high', 'medium', 'low'];
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-/** 保存データを 1 件ずつ検証し、壊れた項目は読み飛ばす。 */
-function toTask(value: unknown): Task | null {
+/** 保存データ・同期データを 1 件ずつ検証する。復元できない項目は null。 */
+export function parseTask(value: unknown): Task | null {
   if (typeof value !== 'object' || value === null) return null;
   const v = value as Record<string, unknown>;
   if (typeof v.id !== 'string' || typeof v.title !== 'string') return null;
@@ -27,6 +27,8 @@ function toTask(value: unknown): Task | null {
     completedAt: completed ? (typeof v.completedAt === 'string' ? v.completedAt : updatedAt) : null,
     createdAt,
     updatedAt,
+    // 同期対応前のデータには無いため、未削除として扱う
+    deletedAt: typeof v.deletedAt === 'string' ? v.deletedAt : null,
   };
 }
 
@@ -37,9 +39,13 @@ export async function loadTasks(): Promise<Task[]> {
   if (!Array.isArray(parsed)) {
     throw new Error('保存データの形式が正しくありません');
   }
-  return parsed.map(toTask).filter((task): task is Task => task !== null);
+  return parsed.map(parseTask).filter((task): task is Task => task !== null);
 }
 
 export async function saveTasks(tasks: readonly Task[]): Promise<void> {
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+export async function clearTasks(): Promise<void> {
+  await AsyncStorage.removeItem(STORAGE_KEY);
 }

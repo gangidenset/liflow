@@ -9,6 +9,7 @@
 - **タスク一覧**: すべて・未完了・完了済みの切り替え、期限が近いタスクの強調、優先度の色分け
 - **家計簿**: 支出・収入の記録（金額、日付、カテゴリ、メモ）と編集・削除、月ごとの支出・収入・収支、支出のカテゴリ別内訳、1 か月の支出予算と残額
 - **データ保存**: 端末内（AsyncStorage）に保存し、アプリを再起動しても保持
+- **ログインとクラウド同期**（任意）: メールアドレスとパスワードでログインすると、タスクと家計簿をアカウントに保存し、複数の端末で同じデータを使えます。オフラインでも使え、通信が戻ると自動で同期します。準備手順は [docs/supabase-setup.md](docs/supabase-setup.md) を参照してください
 
 ## 開発環境
 
@@ -141,15 +142,25 @@ npm run build:web
 ## ディレクトリ構成
 
 ```
+docs/
+  supabase-setup.md  クラウド同期の準備手順
+supabase/
+  schema.sql    クラウド同期用のテーブル定義
 src/
   app/          画面（Expo Router）
-    (tabs)/     下部タブ（ホーム・タスク一覧）
-    task-editor.tsx  タスク追加・編集（モーダル）
+    (tabs)/     下部タブ（ホーム・タスク一覧・家計簿・設定）
+    task-editor.tsx    タスク追加・編集（モーダル）
+    ledger-editor.tsx  家計簿の記録の追加・編集（モーダル）
+    budget-editor.tsx  予算の設定（モーダル）
+    login.tsx          ログイン・新規登録（モーダル）
+    reset-password.tsx パスワード再設定（Web 版、メールのリンク先）
   __tests__/    自動テスト
   components/   共通コンポーネント
-  context/      タスクの状態管理
+  context/      状態管理（タスク、家計簿、ログイン、同期）
   hooks/        共通フック
+  lib/          外部サービスの設定（Supabase）
   storage/      AsyncStorage の読み書き
+  sync/         クラウド同期の仕組み
   theme/        色・余白・文字サイズ
   types/        型定義
   utils/        日付・並び替えなどの補助関数

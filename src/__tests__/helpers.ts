@@ -13,6 +13,7 @@ export function makeTask(overrides: Partial<Task> = {}): Task {
     completedAt: null,
     createdAt: '2026-11-01T00:00:00.000Z',
     updatedAt: '2026-11-01T00:00:00.000Z',
+    deletedAt: null,
     ...overrides,
   };
 }
@@ -28,6 +29,7 @@ export function makeEntry(overrides: Partial<LedgerEntry> = {}): LedgerEntry {
     note: '',
     createdAt: '2026-11-10T00:00:00.000Z',
     updatedAt: '2026-11-10T00:00:00.000Z',
+    deletedAt: null,
     ...overrides,
   };
 }
