@@ -34,6 +34,12 @@ jobs:
 
       - name: Build
         run: npm run build:web
+        env:
+          # クラウド同期の接続情報（公開して問題のない値）。
+          # GitHub の Settings → Secrets and variables → Actions → Variables で設定する。
+          # 未設定なら、ログイン機能のない端末内だけの版として公開される。
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
 
       - uses: actions/upload-pages-artifact@v5
         with:
