@@ -35,7 +35,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#F4F5F9"
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "experiments": {
       "baseUrl": "/liflow"
