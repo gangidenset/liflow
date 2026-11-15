@@ -28,7 +28,20 @@ export interface LedgerEntry {
   note: string;
   createdAt: string;
   updatedAt: string;
+  /** 削除した日時。削除していなければ null（他の端末へ削除を伝えるため記録は残す） */
+  deletedAt: string | null;
 }
+
+/** 1 か月の支出予算の設定 */
+export type BudgetSetting = {
+  /** 予算（円）。未設定は null */
+  amount: number | null;
+  /** 最後に変更した日時（同期で新しい方を残すために使う） */
+  updatedAt: string;
+};
+
+/** 予算を一度も設定していない状態。どの端末の設定よりも古い扱いにする */
+export const INITIAL_BUDGET: BudgetSetting = { amount: null, updatedAt: '1970-01-01T00:00:00.000Z' };
 
 /** 登録・編集フォームで入力する項目 */
 export type LedgerEntryInput = Pick<LedgerEntry, 'type' | 'date' | 'amount' | 'category' | 'note'>;

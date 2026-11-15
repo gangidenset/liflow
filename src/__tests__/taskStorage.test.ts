@@ -57,6 +57,7 @@ describe('taskStorage', () => {
       priority: 'medium',
       completed: false,
       completedAt: null,
+      deletedAt: null,
     });
     expect(typeof task.createdAt).toBe('string');
     expect(task.updatedAt).toBe(task.createdAt);

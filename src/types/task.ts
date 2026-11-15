@@ -13,6 +13,8 @@ export interface Task {
   completedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  /** 削除した日時。削除していなければ null（他の端末へ削除を伝えるため記録は残す） */
+  deletedAt: string | null;
 }
 
 /** 登録・編集フォームで入力する項目 */

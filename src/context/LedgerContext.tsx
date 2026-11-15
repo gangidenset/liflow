@@ -11,13 +11,23 @@ import {
 } from 'react';
 
 import { loadBudget, loadEntries, saveBudget, saveEntries } from '@/storage/ledgerStorage';
-import type { LedgerEntry, LedgerEntryInput } from '@/types/ledger';
+import { isNewer, mergeById, withoutDeleted } from '@/sync/merge';
+import {
+  INITIAL_BUDGET,
+  type BudgetSetting,
+  type LedgerEntry,
+  type LedgerEntryInput,
+} from '@/types/ledger';
 
 export type LedgerAction =
   | { type: 'loaded'; entries: LedgerEntry[] }
   | { type: 'added'; entry: LedgerEntry }
   | { type: 'updated'; id: string; input: LedgerEntryInput; now: string }
-  | { type: 'deleted'; id: string };
+  | { type: 'deleted'; id: string; now: string }
+  /** 同期で受け取った記録を取り込む（新しい方を残す） */
+  | { type: 'merged'; entries: LedgerEntry[] }
+  /** すべて消す（ログアウト時） */
+  | { type: 'reset' };
 
 export function ledgerReducer(state: LedgerEntry[], action: LedgerAction): LedgerEntry[] {
   switch (action.type) {
@@ -30,7 +40,14 @@ export function ledgerReducer(state: LedgerEntry[], action: LedgerAction): Ledge
         entry.id === action.id ? { ...entry, ...action.input, updatedAt: action.now } : entry,
       );
     case 'deleted':
-      return state.filter((entry) => entry.id !== action.id);
+      // 記録は残して削除日時を付ける（同期で他の端末に削除を伝えるため）
+      return state.map((entry) =>
+        entry.id === action.id ? { ...entry, deletedAt: action.now, updatedAt: action.now } : entry,
+      );
+    case 'merged':
+      return mergeById(state, action.entries);
+    case 'reset':
+      return [];
   }
 }
 
@@ -43,9 +60,14 @@ function normalize(input: LedgerEntryInput): LedgerEntryInput {
 }
 
 type LedgerContextValue = {
+  /** 画面に出す記録（削除済みを除く） */
   entries: LedgerEntry[];
+  /** 削除済みも含むすべての記録（同期用） */
+  allEntries: LedgerEntry[];
   /** 1 か月の支出予算（円）。未設定は null */
   budget: number | null;
+  /** 予算の設定（変更日時つき、同期用） */
+  budgetSetting: BudgetSetting;
   /** 保存済みデータの読み込みが終わったか */
   isLoaded: boolean;
   /** 読み込み・保存に失敗したときのメッセージ */
@@ -54,13 +76,17 @@ type LedgerContextValue = {
   updateEntry: (id: string, input: LedgerEntryInput) => void;
   deleteEntry: (id: string) => void;
   setBudget: (budget: number | null) => void;
+  /** 同期で受け取った記録と予算を取り込む（それぞれ新しい方を残す） */
+  mergeLedger: (entries: LedgerEntry[], budget: BudgetSetting | null) => void;
+  /** 端末内の家計簿をすべて消す */
+  resetLedger: () => void;
 };
 
 const LedgerContext = createContext<LedgerContextValue | null>(null);
 
 export function LedgerProvider({ children }: { children: ReactNode }) {
-  const [entries, dispatch] = useReducer(ledgerReducer, []);
-  const [budget, setBudgetState] = useState<number | null>(null);
+  const [allEntries, dispatch] = useReducer(ledgerReducer, []);
+  const [budgetSetting, setBudgetSetting] = useState<BudgetSetting>(INITIAL_BUDGET);
   const [isLoaded, setIsLoaded] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
   /** 読み込みに失敗した場合、既存の保存データを空の状態で上書きしないために保存を止める */
@@ -79,7 +105,7 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
           console.warn('Failed to load ledger entries', entriesResult.reason);
         }
         if (budgetResult.status === 'fulfilled') {
-          setBudgetState(budgetResult.value);
+          setBudgetSetting(budgetResult.value);
           canSaveBudget.current = true;
         } else {
           console.warn('Failed to load budget', budgetResult.reason);
@@ -98,25 +124,25 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoaded || !canSaveEntries.current) return;
-    saveEntries(entries).catch((error: unknown) => {
+    saveEntries(allEntries).catch((error: unknown) => {
       console.warn('Failed to save ledger entries', error);
       setStorageError('家計簿を保存できませんでした。端末の空き容量を確認してください。');
     });
-  }, [entries, isLoaded]);
+  }, [allEntries, isLoaded]);
 
   useEffect(() => {
     if (!isLoaded || !canSaveBudget.current) return;
-    saveBudget(budget).catch((error: unknown) => {
+    saveBudget(budgetSetting).catch((error: unknown) => {
       console.warn('Failed to save budget', error);
       setStorageError('予算を保存できませんでした。端末の空き容量を確認してください。');
     });
-  }, [budget, isLoaded]);
+  }, [budgetSetting, isLoaded]);
 
   const addEntry = useCallback((input: LedgerEntryInput) => {
     const now = new Date().toISOString();
     dispatch({
       type: 'added',
-      entry: { id: createId(), ...normalize(input), createdAt: now, updatedAt: now },
+      entry: { id: createId(), ...normalize(input), createdAt: now, updatedAt: now, deletedAt: null },
     });
   }, []);
 
@@ -125,25 +151,59 @@ export function LedgerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteEntry = useCallback((id: string) => {
-    dispatch({ type: 'deleted', id });
+    dispatch({ type: 'deleted', id, now: new Date().toISOString() });
   }, []);
 
-  const setBudget = useCallback((value: number | null) => {
-    setBudgetState(value);
+  const setBudget = useCallback((amount: number | null) => {
+    setBudgetSetting({ amount, updatedAt: new Date().toISOString() });
   }, []);
+
+  const mergeLedger = useCallback((entries: LedgerEntry[], budget: BudgetSetting | null) => {
+    dispatch({ type: 'merged', entries });
+    if (budget) {
+      setBudgetSetting((current) => (isNewer(budget, current) ? budget : current));
+    }
+  }, []);
+
+  const resetLedger = useCallback(() => {
+    // 読み込みに失敗していた場合も、明示的に消すときは保存を再開する
+    canSaveEntries.current = true;
+    canSaveBudget.current = true;
+    setStorageError(null);
+    dispatch({ type: 'reset' });
+    setBudgetSetting(INITIAL_BUDGET);
+  }, []);
+
+  const entries = useMemo(() => withoutDeleted(allEntries), [allEntries]);
 
   const value = useMemo(
     () => ({
       entries,
-      budget,
+      allEntries,
+      budget: budgetSetting.amount,
+      budgetSetting,
       isLoaded,
       storageError,
       addEntry,
       updateEntry,
       deleteEntry,
       setBudget,
+      mergeLedger,
+      resetLedger,
     }),
-    [entries, budget, isLoaded, storageError, addEntry, updateEntry, deleteEntry, setBudget],
+    [
+      entries,
+      allEntries,
+      budgetSetting,
+      isLoaded,
+      storageError,
+      addEntry,
+      updateEntry,
+      deleteEntry,
+      setBudget,
+      mergeLedger,
+      resetLedger,
+    ],
   );
 
   return <LedgerContext.Provider value={value}>{children}</LedgerContext.Provider>;

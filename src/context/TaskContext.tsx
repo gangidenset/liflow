@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import { loadTasks, saveTasks } from '@/storage/taskStorage';
+import { mergeById, withoutDeleted } from '@/sync/merge';
 import type { Task, TaskInput } from '@/types/task';
 
 export type TaskAction =
@@ -18,7 +19,11 @@ export type TaskAction =
   | { type: 'added'; task: Task }
   | { type: 'updated'; id: string; input: TaskInput; now: string }
   | { type: 'toggled'; id: string; now: string }
-  | { type: 'deleted'; id: string };
+  | { type: 'deleted'; id: string; now: string }
+  /** 同期で受け取った記録を取り込む（新しい方を残す） */
+  | { type: 'merged'; tasks: Task[] }
+  /** すべて消す（ログアウト時） */
+  | { type: 'reset' };
 
 export function taskReducer(state: Task[], action: TaskAction): Task[] {
   switch (action.type) {
@@ -42,7 +47,14 @@ export function taskReducer(state: Task[], action: TaskAction): Task[] {
           : task,
       );
     case 'deleted':
-      return state.filter((task) => task.id !== action.id);
+      // 記録は残して削除日時を付ける（同期で他の端末に削除を伝えるため）
+      return state.map((task) =>
+        task.id === action.id ? { ...task, deletedAt: action.now, updatedAt: action.now } : task,
+      );
+    case 'merged':
+      return mergeById(state, action.tasks);
+    case 'reset':
+      return [];
   }
 }
 
@@ -55,7 +67,10 @@ function normalize(input: TaskInput): TaskInput {
 }
 
 type TaskContextValue = {
+  /** 画面に出すタスク（削除済みを除く） */
   tasks: Task[];
+  /** 削除済みも含むすべてのタスク（同期用） */
+  allTasks: Task[];
   /** 保存済みデータの読み込みが終わったか */
   isLoaded: boolean;
   /** 読み込み・保存に失敗したときのメッセージ */
@@ -64,12 +79,16 @@ type TaskContextValue = {
   updateTask: (id: string, input: TaskInput) => void;
   toggleTask: (id: string) => void;
   deleteTask: (id: string) => void;
+  /** 同期で受け取ったタスクを取り込む */
+  mergeTasks: (tasks: Task[]) => void;
+  /** 端末内のタスクをすべて消す */
+  resetTasks: () => void;
 };
 
 const TaskContext = createContext<TaskContextValue | null>(null);
 
 export function TaskProvider({ children }: { children: ReactNode }) {
-  const [tasks, dispatch] = useReducer(taskReducer, []);
+  const [allTasks, dispatch] = useReducer(taskReducer, []);
   const [isLoaded, setIsLoaded] = useState(false);
   const [storageError, setStorageError] = useState<string | null>(null);
   /** 読み込みに失敗した場合、既存の保存データを空の一覧で上書きしないために保存を止める */
@@ -98,13 +117,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoaded || !canSave.current) return;
-    saveTasks(tasks)
+    saveTasks(allTasks)
       .then(() => setStorageError(null))
       .catch((error: unknown) => {
         console.warn('Failed to save tasks', error);
         setStorageError('タスクを保存できませんでした。端末の空き容量を確認してください。');
       });
-  }, [tasks, isLoaded]);
+  }, [allTasks, isLoaded]);
 
   const addTask = useCallback((input: TaskInput) => {
     const now = new Date().toISOString();
@@ -117,6 +136,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         completedAt: null,
         createdAt: now,
         updatedAt: now,
+        deletedAt: null,
       },
     });
   }, []);
@@ -130,12 +150,47 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteTask = useCallback((id: string) => {
-    dispatch({ type: 'deleted', id });
+    dispatch({ type: 'deleted', id, now: new Date().toISOString() });
   }, []);
 
+  const mergeTasks = useCallback((tasks: Task[]) => {
+    dispatch({ type: 'merged', tasks });
+  }, []);
+
+  const resetTasks = useCallback(() => {
+    // 読み込みに失敗していた場合も、明示的に消すときは保存を再開する
+    canSave.current = true;
+    setStorageError(null);
+    dispatch({ type: 'reset' });
+  }, []);
+
+  const tasks = useMemo(() => withoutDeleted(allTasks), [allTasks]);
+
   const value = useMemo(
-    () => ({ tasks, isLoaded, storageError, addTask, updateTask, toggleTask, deleteTask }),
-    [tasks, isLoaded, storageError, addTask, updateTask, toggleTask, deleteTask],
+    () => ({
+      tasks,
+      allTasks,
+      isLoaded,
+      storageError,
+      addTask,
+      updateTask,
+      toggleTask,
+      deleteTask,
+      mergeTasks,
+      resetTasks,
+    }),
+    [
+      tasks,
+      allTasks,
+      isLoaded,
+      storageError,
+      addTask,
+      updateTask,
+      toggleTask,
+      deleteTask,
+      mergeTasks,
+      resetTasks,
+    ],
   );
 
   return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
