@@ -10,6 +10,7 @@
 - **家計簿**: 支出・収入の記録（金額、日付、カテゴリ、メモ）と編集・削除、月ごとの支出・収入・収支、支出のカテゴリ別内訳、1 か月の支出予算と残額
 - **データ保存**: 端末内（AsyncStorage）に保存し、アプリを再起動しても保持
 - **ログインとクラウド同期**（任意）: メールアドレスとパスワードでログインすると、タスクと家計簿をアカウントに保存し、複数の端末で同じデータを使えます。オフラインでも使え、通信が戻ると自動で同期します。準備手順は [docs/supabase-setup.md](docs/supabase-setup.md) を参照してください
+- **AI 機能**（任意・ログインが必要）: Supabase の Edge Function 経由で Claude を呼び出します。現在は設定タブの接続テストのみで、AI を使う機能はこれから追加します。準備手順は [docs/ai-setup.md](docs/ai-setup.md) を参照してください
 
 ## 開発環境
 
@@ -96,6 +97,12 @@ npm run lint
 npm test
 ```
 
+```bash
+npm run test:functions
+```
+
+`npm run test:functions` は、AI 機能のサーバー側（`supabase/functions/ai`）のテストを Deno で実行します（初回は Deno を自動でダウンロードします）。
+
 `npm test` は、日付の判定、並び替えと絞り込み、タスクの状態更新、保存データの読み書きを対象にした自動テスト（Jest）を実行します。テストは `src/__tests__/` にあります。
 
 ```bash
@@ -137,15 +144,17 @@ npm run build:web
 
 ## CI
 
-プルリクエストの作成・更新時と `main` への Push 時に、GitHub Actions が lint・型チェック・自動テスト・`expo-doctor` を実行します。設定は `.github/workflows/ci.yml` にあります。
+プルリクエストの作成・更新時と `main` への Push 時に、GitHub Actions が lint・型チェック・自動テスト・`expo-doctor` と、AI 機能のサーバー側の型チェック・テストを実行します。設定は `.github/workflows/ci.yml` にあります。
 
 ## ディレクトリ構成
 
 ```
 docs/
   supabase-setup.md  クラウド同期の準備手順
+  ai-setup.md        AI 機能の準備手順
 supabase/
-  schema.sql    クラウド同期用のテーブル定義
+  schema.sql    クラウド同期・AI の利用回数のテーブル定義
+  functions/ai/ AI 機能のサーバー側（Supabase Edge Function、Deno）
 src/
   app/          画面（Expo Router）
     (tabs)/     下部タブ（ホーム・タスク一覧・家計簿・設定）
@@ -155,6 +164,7 @@ src/
     login.tsx          ログイン・新規登録（モーダル）
     reset-password.tsx パスワード再設定（Web 版、メールのリンク先）
   __tests__/    自動テスト
+  ai/           AI 機能の呼び出し
   components/   共通コンポーネント
   context/      状態管理（タスク、家計簿、ログイン、同期）
   hooks/        共通フック
