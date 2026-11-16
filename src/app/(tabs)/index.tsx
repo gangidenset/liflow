@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AddButton } from '@/components/AddButton';
+import { AiPlanTodayButton } from '@/components/AiPlanTodayButton';
 import { AiQuickAddButton } from '@/components/AiQuickAddButton';
 import { EmptyState } from '@/components/EmptyState';
 import { ProgressCard } from '@/components/ProgressCard';
@@ -46,6 +47,7 @@ export default function HomeScreen() {
                 activeCount={todayTasks.length - completedCount}
               />
               <Text style={styles.sectionTitle}>今日のタスク</Text>
+              <AiPlanTodayButton />
             </View>
           }
           renderItem={({ item }) => (

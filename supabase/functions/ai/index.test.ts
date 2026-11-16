@@ -358,3 +358,120 @@ Deno.test('normalizeDrafts: 長すぎる文字は切り詰め、最大 10 件ま
   assertEquals(normalizeDrafts({ items: 'x' }, '2026-11-16'), []);
   assertEquals(normalizeDrafts(null, '2026-11-16'), []);
 });
+
+// ---------------------------------------------------------------------------
+// plan_today（今日やることの提案）
+// ---------------------------------------------------------------------------
+
+const { normalizePlan, parsePlanInput } = await import('./index.ts');
+
+const candidate = (n: number, extra: Record<string, unknown> = {}) => ({
+  n,
+  title: `タスク${n}`,
+  note: '',
+  dueDate: null,
+  priority: 'medium',
+  ...extra,
+});
+
+Deno.test('plan_today: 候補と今日の予定を番号つきで渡し、提案を返す', async () => {
+  reset();
+  claudeReply = claudeJson({
+    message: '無理なく進めましょう',
+    suggestions: [
+      { n: 2, reason: '明日が期限なので今日のうちに' },
+      { n: 1, reason: '短時間で終わりそう' },
+    ],
+  });
+  const res = await call(
+    {
+      feature: 'plan_today',
+      today: '2026-11-16',
+      input: {
+        candidates: [
+          candidate(1, { title: '本を返す', note: '図書館' }),
+          candidate(2, { title: '書類を出す', dueDate: '2026-11-17', priority: 'high' }),
+        ],
+        today: [{ title: '牛乳を買う', dueDate: '2026-11-16', priority: 'low' }],
+      },
+    },
+    await token(),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(res.json.data, {
+    message: '無理なく進めましょう',
+    suggestions: [
+      { n: 2, reason: '明日が期限なので今日のうちに' },
+      { n: 1, reason: '短時間で終わりそう' },
+    ],
+  });
+  const body = claudeCalls[0].body;
+  if (!String(body.system).includes('2026-11-16（月曜日）')) throw new Error('today missing');
+  const user = String((body.messages as any)[0].content);
+  for (const expected of [
+    'n=1: 本を返す［優先度 medium・期限なし］ メモ: 図書館',
+    'n=2: 書類を出す［優先度 high・期限 2026-11-17（火）］',
+    '- 牛乳を買う［優先度 low・期限 2026-11-16（月）］',
+  ]) {
+    if (!user.includes(expected)) throw new Error(`prompt missing: ${expected}\n${user}`);
+  }
+  assertEquals(usageCount, 1, 'usage');
+});
+
+Deno.test('plan_today: 候補が無い・多すぎる・形が不正なら 400 で、回数も数えない', async () => {
+  reset();
+  const t = await token();
+  const bad = [
+    undefined,
+    { candidates: [] },
+    { candidates: 'x' },
+    { candidates: Array.from({ length: 31 }, (_, i) => candidate(i + 1)) },
+    { candidates: [candidate(1, { title: '' })] },
+    { candidates: [candidate(0)] },
+    { candidates: [candidate(1), candidate(1)] },
+    { candidates: [candidate(1, { priority: 'urgent' })] },
+    { candidates: [candidate(1, { dueDate: '2026-02-30' })] },
+    { candidates: [candidate(1)], today: Array.from({ length: 21 }, () => ({ title: 't', dueDate: null, priority: 'low' })) },
+  ];
+  for (const input of bad) {
+    const res = await call({ feature: 'plan_today', input }, t);
+    assertEquals(res.status, 400, JSON.stringify(input)?.slice(0, 60));
+  }
+  assertEquals(claudeCalls.length, 0);
+  assertEquals(usageCount, 0, 'usage');
+});
+
+Deno.test('normalizePlan: 候補にない番号・重複を捨て、最大 5 件にし、文字数を切り詰める', () => {
+  const numbers = new Set([1, 2, 3, 4, 5, 6, 7]);
+  const result = normalizePlan(
+    {
+      message: 'あ'.repeat(200),
+      suggestions: [
+        { n: 9, reason: '候補にない' },
+        { n: 1, reason: 'い'.repeat(100) },
+        { n: 1, reason: '重複' },
+        { n: '2', reason: '文字の番号' },
+        { n: 2 },
+        { n: 3, reason: 'c' },
+        { n: 4, reason: 'd' },
+        { n: 5, reason: 'e' },
+        { n: 6, reason: '6 件目' },
+      ],
+    },
+    numbers,
+  );
+  assertEquals(result.message.length, 120);
+  assertEquals(result.suggestions.map((s) => s.n), [1, 2, 3, 4, 5]);
+  assertEquals(result.suggestions[0].reason.length, 80);
+  assertEquals(result.suggestions[1].reason, '');
+  assertEquals(normalizePlan(null, numbers), { message: '', suggestions: [] });
+});
+
+Deno.test('parsePlanInput: メモは 100 文字に切り詰め、今日の予定からメモは送らない', () => {
+  const input = parsePlanInput({
+    candidates: [candidate(3, { note: 'め'.repeat(300) })],
+    today: [{ title: '今日の', note: '秘密のメモ', dueDate: '2026-11-16', priority: 'high' }],
+  });
+  assertEquals(input.candidates[0].note.length, 100);
+  assertEquals(input.today, [{ title: '今日の', dueDate: '2026-11-16', priority: 'high' }]);
+});
