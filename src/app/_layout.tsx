@@ -38,6 +38,10 @@ export default function RootLayout() {
                   options={{ presentation: 'modal', title: '予算の設定', headerBackTitle: '戻る' }}
                 />
                 <Stack.Screen
+                  name="ai-add"
+                  options={{ presentation: 'modal', title: 'AI で追加', headerBackTitle: '戻る' }}
+                />
+                <Stack.Screen
                   name="login"
                   options={{ presentation: 'modal', title: 'ログイン', headerBackTitle: '戻る' }}
                 />

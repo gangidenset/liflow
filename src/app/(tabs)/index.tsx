@@ -3,6 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AddButton } from '@/components/AddButton';
+import { AiQuickAddButton } from '@/components/AiQuickAddButton';
 import { EmptyState } from '@/components/EmptyState';
 import { ProgressCard } from '@/components/ProgressCard';
 import { ScreenHeader } from '@/components/ScreenHeader';
@@ -38,13 +39,14 @@ export default function HomeScreen() {
           keyExtractor={(task) => task.id}
           contentContainerStyle={styles.content}
           ListHeaderComponent={
-            <>
+            <View style={styles.header}>
+              <AiQuickAddButton />
               <ProgressCard
                 completedCount={completedCount}
                 activeCount={todayTasks.length - completedCount}
               />
               <Text style={styles.sectionTitle}>今日のタスク</Text>
-            </>
+            </View>
           }
           renderItem={({ item }) => (
             <TaskItem task={item} todayKey={todayKey} onToggle={toggleTask} onPress={openTask} />
@@ -72,11 +74,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: 110,
   },
+  header: { gap: spacing.md },
   sectionTitle: {
     fontSize: fontSize.subtitle,
     fontWeight: '700',
     color: colors.text,
-    marginTop: spacing.xl,
+    marginTop: spacing.sm,
     marginBottom: spacing.md,
   },
   loading: { marginTop: spacing.xxl },

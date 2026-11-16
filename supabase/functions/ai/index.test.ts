@@ -258,3 +258,103 @@ Deno.test('不正な JSON の本文は 400', async () => {
   );
   assertEquals(res.status, 400);
 });
+
+// ---------------------------------------------------------------------------
+// quick_add（文章からタスク・家計簿の下書きを作る）
+// ---------------------------------------------------------------------------
+
+const { normalizeDrafts } = await import('./index.ts');
+
+function claudeJson(value: unknown) {
+  return () => okReply(JSON.stringify(value));
+}
+
+const blank = { title: '', note: '', due_date: null, priority: 'medium', amount: null, date: null, category: null };
+
+Deno.test('quick_add: 文章と今日の日付・曜日を渡し、下書きを返す', async () => {
+  reset();
+  claudeReply = claudeJson({
+    items: [
+      { ...blank, kind: 'task', title: '歯医者を予約する', due_date: '2026-11-20', priority: 'high' },
+      { ...blank, kind: 'expense', title: 'ランチ', amount: 980, date: '2026-11-16', category: 'food' },
+    ],
+  });
+  const res = await call(
+    { feature: 'quick_add', today: '2026-11-16', input: { text: '金曜までに歯医者を予約、ランチ980円' } },
+    await token(),
+  );
+  assertEquals(res.status, 200);
+  assertEquals(res.json.data.items, [
+    { kind: 'task', title: '歯医者を予約する', note: '', dueDate: '2026-11-20', priority: 'high' },
+    { kind: 'expense', amount: 980, date: '2026-11-16', category: 'food', note: 'ランチ' },
+  ]);
+  const body = claudeCalls[0].body;
+  const system = String(body.system);
+  if (!system.includes('2026-11-16（月曜日）')) throw new Error('today/weekday missing in system prompt');
+  if (!system.includes('food（食費）') || !system.includes('salary（給与）')) throw new Error('categories missing');
+  const user = String((body.messages as any)[0].content);
+  if (!user.includes('<text>\n金曜までに歯医者を予約、ランチ980円\n</text>')) throw new Error('user text not wrapped');
+  const schema = (body.output_config as any).format.schema;
+  assertEquals(schema.required, ['items']);
+  assertEquals(usageCount, 1, 'usage');
+});
+
+Deno.test('quick_add: 文章が空・長すぎる・文字列でないときは 400 で、回数も数えない', async () => {
+  reset();
+  const t = await token();
+  for (const input of [undefined, {}, { text: '' }, { text: '   ' }, { text: 123 }, { text: 'あ'.repeat(1001) }]) {
+    const res = await call({ feature: 'quick_add', input }, t);
+    assertEquals(res.status, 400, JSON.stringify(input)?.slice(0, 30));
+    assertEquals(res.json.error.code, 'bad_request');
+  }
+  assertEquals(claudeCalls.length, 0);
+  assertEquals(usageCount, 0, 'usage');
+});
+
+Deno.test('quick_add: ちょうど 1000 文字は受け付ける', async () => {
+  reset();
+  claudeReply = claudeJson({ items: [] });
+  const res = await call({ feature: 'quick_add', input: { text: 'あ'.repeat(1000) } }, await token());
+  assertEquals(res.status, 200);
+  assertEquals(res.json.data.items, []);
+});
+
+Deno.test('normalizeDrafts: 形の合わない項目を捨て、足りない値を補う', () => {
+  const today = '2026-11-16';
+  const drafts = normalizeDrafts(
+    {
+      items: [
+        { ...blank, kind: 'task', title: '  牛乳を買う  ', note: ' 2本 ', due_date: '2026-02-30', priority: 'urgent' },
+        { ...blank, kind: 'task', title: '   ' },
+        { ...blank, kind: 'expense', title: '電車', amount: 220, date: null, category: 'transport' },
+        { ...blank, kind: 'expense', title: '謎', amount: 500, date: '2026-11-15', category: 'salary', note: '' },
+        { ...blank, kind: 'income', title: '給料', amount: 250000, date: '2026-11-25', category: 'salary' },
+        { ...blank, kind: 'income', title: 'お祝い', amount: 10000, category: 'gift' },
+        { ...blank, kind: 'expense', title: '0円', amount: 0 },
+        { ...blank, kind: 'expense', title: '小数', amount: 12.5 },
+        { ...blank, kind: 'expense', title: '大きすぎ', amount: 10_000_001 },
+        { ...blank, kind: 'expense', title: '文字の金額', amount: '980' },
+        { ...blank, kind: 'transfer', title: '?', amount: 100 },
+        null,
+        'text',
+      ],
+    },
+    today,
+  );
+  assertEquals(drafts, [
+    { kind: 'task', title: '牛乳を買う', note: '2本', dueDate: null, priority: 'medium' },
+    { kind: 'expense', amount: 220, date: today, category: 'transport', note: '電車' },
+    { kind: 'expense', amount: 500, date: '2026-11-15', category: 'other', note: '謎' },
+    { kind: 'income', amount: 250000, date: '2026-11-25', category: 'salary', note: '給料' },
+    { kind: 'income', amount: 10000, date: today, category: 'other_income', note: 'お祝い' },
+  ]);
+});
+
+Deno.test('normalizeDrafts: 長すぎる文字は切り詰め、最大 10 件まで', () => {
+  const many = Array.from({ length: 15 }, (_, i) => ({ ...blank, kind: 'task', title: `t${i}` }));
+  assertEquals(normalizeDrafts({ items: many }, '2026-11-16').length, 10);
+  const [long] = normalizeDrafts({ items: [{ ...blank, kind: 'task', title: 'あ'.repeat(150), note: 'い'.repeat(300) }] }, '2026-11-16');
+  assertEquals([(long as any).title.length, (long as any).note.length], [100, 200]);
+  assertEquals(normalizeDrafts({ items: 'x' }, '2026-11-16'), []);
+  assertEquals(normalizeDrafts(null, '2026-11-16'), []);
+});
