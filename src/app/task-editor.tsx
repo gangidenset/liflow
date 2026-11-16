@@ -12,11 +12,19 @@ import { PRIORITY_LABELS, PRIORITY_ORDER, type Priority } from '@/types/task';
 import { confirmDestructive } from '@/utils/confirm';
 
 const TITLE_MAX_LENGTH = 100;
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const NOTE_MAX_LENGTH = 1000;
 
 /** タスクの新規登録・編集画面。id パラメータがあれば編集、なければ新規登録。 */
 export default function TaskEditorScreen() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  // 新規登録のときは、AI の下書きなどから初期値を受け取れる（title / note / dueDate / priority）
+  const { id, title, note, dueDate, priority } = useLocalSearchParams<{
+    id?: string;
+    title?: string;
+    note?: string;
+    dueDate?: string;
+    priority?: string;
+  }>();
   const { tasks, isLoaded, addTask, updateTask, deleteTask } = useTasks();
   const editingTask = id ? tasks.find((task) => task.id === id) : undefined;
 
@@ -37,10 +45,12 @@ export default function TaskEditorScreen() {
       key={editingTask?.id ?? 'new'}
       isEdit={editingTask !== undefined}
       initial={{
-        title: editingTask?.title ?? '',
-        note: editingTask?.note ?? '',
-        dueDate: editingTask?.dueDate ?? null,
-        priority: editingTask?.priority ?? 'medium',
+        title: editingTask?.title ?? title ?? '',
+        note: editingTask?.note ?? note ?? '',
+        dueDate: editingTask?.dueDate ?? (dueDate && DATE_KEY_PATTERN.test(dueDate) ? dueDate : null),
+        priority:
+          editingTask?.priority ??
+          (PRIORITY_ORDER.includes(priority as Priority) ? (priority as Priority) : 'medium'),
       }}
       onSubmit={(input) => {
         if (editingTask) updateTask(editingTask.id, input);

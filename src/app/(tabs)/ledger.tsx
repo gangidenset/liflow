@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, SectionList, StyleSheet, Text, View } from 'react-native';
 
 import { AddButton } from '@/components/AddButton';
+import { AiQuickAddButton } from '@/components/AiQuickAddButton';
 import { BudgetCard } from '@/components/BudgetCard';
 import { CategoryBreakdown } from '@/components/CategoryBreakdown';
 import { EmptyState } from '@/components/EmptyState';
@@ -51,6 +52,7 @@ export default function LedgerScreen() {
           contentContainerStyle={styles.content}
           ListHeaderComponent={
             <View style={styles.header}>
+              <AiQuickAddButton />
               <MonthSwitcher
                 monthKey={monthKey}
                 currentMonthKey={currentMonthKey}

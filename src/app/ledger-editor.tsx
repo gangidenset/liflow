@@ -24,7 +24,18 @@ const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** 支出・収入の登録・編集画面。id があれば編集、なければ新規登録（date で日付の初期値を指定可）。 */
 export default function LedgerEditorScreen() {
-  const { id, date } = useLocalSearchParams<{ id?: string; date?: string }>();
+  // 新規登録のときは、日付の初期値や AI の下書き（type / amount / category / note）を受け取れる
+  const params = useLocalSearchParams<{
+    id?: string;
+    date?: string;
+    type?: string;
+    amount?: string;
+    category?: string;
+    note?: string;
+  }>();
+  const { id, date } = params;
+  const draftType: EntryType = params.type === 'income' ? 'income' : 'expense';
+  const draftAmount = params.amount ? parseAmount(params.amount) : null;
   const { entries, isLoaded, addEntry, updateEntry, deleteEntry } = useLedger();
   const todayKey = useTodayKey();
   const editing = id ? entries.find((entry) => entry.id === id) : undefined;
@@ -46,11 +57,13 @@ export default function LedgerEditorScreen() {
       isEdit={editing !== undefined}
       todayKey={todayKey}
       initial={{
-        type: editing?.type ?? 'expense',
+        type: editing?.type ?? draftType,
         date: editing?.date ?? (date && DATE_KEY_PATTERN.test(date) ? date : todayKey),
-        amountText: editing ? String(editing.amount) : '',
-        category: editing?.category ?? defaultCategoryFor('expense'),
-        note: editing?.note ?? '',
+        amountText: editing ? String(editing.amount) : draftAmount ? String(draftAmount) : '',
+        category:
+          editing?.category ??
+          (isCategoryOf(draftType, params.category) ? params.category : defaultCategoryFor(draftType)),
+        note: editing?.note ?? params.note ?? '',
       }}
       onSubmit={(input) => {
         if (editing) updateEntry(editing.id, input);
