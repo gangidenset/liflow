@@ -5,7 +5,8 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*'],
+    // supabase/functions は Deno（Edge Functions）向けのコードなので、アプリとは別に確認する
+    ignores: ['dist/*', 'supabase/functions/*'],
   },
   {
     // Jest のセットアップファイルでは jest がグローバルに提供される

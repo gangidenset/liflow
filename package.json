@@ -40,7 +40,9 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "lint": "expo lint",
-    "build:web": "expo export --platform web && cp dist/index.html dist/404.html"
+    "build:web": "expo export --platform web && cp dist/index.html dist/404.html",
+    "check:functions": "npx --yes deno@2 check --config supabase/functions/deno.json supabase/functions/ai/index.ts",
+    "test:functions": "npx --yes deno@2 test --allow-net --allow-env --allow-read --config supabase/functions/deno.json supabase/functions/ai/index.test.ts"
   },
   "private": true,
   "jest": {
@@ -54,6 +56,10 @@
     "testMatch": [
       "**/*.test.ts",
       "**/*.test.tsx"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/supabase/functions/"
     ]
   }
 }

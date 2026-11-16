@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Supabase Edge Functions のローカル用の秘密の値（API キーなど）
+supabase/functions/.env
+supabase/.temp/

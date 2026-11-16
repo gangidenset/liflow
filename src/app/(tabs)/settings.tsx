@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { callAi, describeAiError } from '@/ai/aiClient';
 import { Button } from '@/components/Button';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { useAuth } from '@/context/AuthContext';
@@ -45,6 +46,13 @@ export default function SettingsScreen() {
             <Button label="ログイン / 新規登録" onPress={() => router.push('/login')} />
           </View>
         )}
+
+        {isAvailable && isReady && session ? (
+          <>
+            <Text style={styles.sectionTitle}>AI 機能</Text>
+            <AiCard />
+          </>
+        ) : null}
 
         <Text style={styles.sectionTitle}>このアプリについて</Text>
         <View style={styles.card}>
@@ -127,6 +135,43 @@ function SignedInCard({ email }: { email: string }) {
   );
 }
 
+/** AI 機能の接続テスト（サーバーの準備ができているかを確かめる） */
+function AiCard() {
+  const [isTesting, setIsTesting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const test = async () => {
+    setIsTesting(true);
+    setResult(null);
+    try {
+      const data = await callAi<{ ok: boolean; model: string }>('test');
+      setResult({ ok: true, message: `AI と接続できました（モデル: ${data.model}）` });
+    } catch (error) {
+      setResult({ ok: false, message: describeAiError(error) });
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.body}>
+        AI 機能は、タスクや家計簿の内容をサーバー経由で AI（Claude）に送って処理します。
+      </Text>
+      {result ? (
+        <Text
+          style={result.ok ? styles.success : styles.error}
+          accessibilityRole={result.ok ? undefined : 'alert'}
+          accessibilityLiveRegion="polite"
+        >
+          {result.message}
+        </Text>
+      ) : null}
+      <Button label="AI の接続テスト" variant="secondary" loading={isTesting} onPress={() => void test()} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.md },
@@ -146,6 +191,7 @@ const styles = StyleSheet.create({
   body: { fontSize: 15, lineHeight: 22, color: colors.text },
   caption: { fontSize: fontSize.caption, lineHeight: 20, color: colors.textSecondary },
   error: { fontSize: fontSize.caption, lineHeight: 20, color: colors.danger },
+  success: { fontSize: fontSize.caption, lineHeight: 20, color: colors.success },
   row: { gap: spacing.xs },
   label: { fontSize: fontSize.caption, fontWeight: '600', color: colors.textSecondary },
   value: { fontSize: fontSize.body, fontWeight: '600', color: colors.text },
