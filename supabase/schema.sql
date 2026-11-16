@@ -146,3 +146,48 @@ create policy "own settings: update" on public.user_settings
   for update to authenticated
   using ((select auth.uid()) = user_id)
   with check ((select auth.uid()) = user_id);
+
+-- ---------------------------------------------------------------------------
+-- AI 機能の利用回数（1 日ごと）
+--   Edge Function「ai」が Claude を呼ぶ前に ai_usage_increment() で数え、上限を超えたら止める。
+--   日付の区切りは日本時間。
+-- ---------------------------------------------------------------------------
+create table if not exists public.ai_usage (
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  day date not null,
+  count integer not null default 0 check (count >= 0),
+  primary key (user_id, day)
+);
+
+alter table public.ai_usage enable row level security;
+revoke all on table public.ai_usage from anon, authenticated;
+grant select on table public.ai_usage to authenticated;
+
+drop policy if exists "own ai usage: select" on public.ai_usage;
+create policy "own ai usage: select" on public.ai_usage
+  for select to authenticated using ((select auth.uid()) = user_id);
+
+-- 呼び出した本人の今日の回数を 1 増やし、増やした後の回数を返す
+create or replace function public.ai_usage_increment()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  caller uuid := auth.uid();
+  result integer;
+begin
+  if caller is null then
+    raise exception 'not authenticated' using errcode = '42501';
+  end if;
+  insert into public.ai_usage (user_id, day, count)
+  values (caller, (now() at time zone 'Asia/Tokyo')::date, 1)
+  on conflict (user_id, day) do update set count = public.ai_usage.count + 1
+  returning count into result;
+  return result;
+end;
+$$;
+
+revoke all on function public.ai_usage_increment() from public, anon, authenticated;
+grant execute on function public.ai_usage_increment() to authenticated;
